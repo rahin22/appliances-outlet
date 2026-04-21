@@ -135,6 +135,7 @@
           "settings": {
             "menu": "categories",
             "heading": "Categories",
+            "show_store_collections": true,
             "menu_spacing": 10,
             "show_as_accordion": false,
             "accordion_icon": "caret",
@@ -155,6 +156,7 @@
           "settings": {
             "menu": "brands",
             "heading": "Brands",
+            "show_store_collections": false,
             "menu_spacing": 10,
             "show_as_accordion": false,
             "accordion_icon": "caret",
@@ -175,6 +177,7 @@
           "settings": {
             "menu": "customer-service",
             "heading": "Customer Service",
+            "show_store_collections": false,
             "menu_spacing": 10,
             "show_as_accordion": false,
             "accordion_icon": "caret",
