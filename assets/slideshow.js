@@ -14,6 +14,7 @@ import { SlideshowSelectEvent } from '@theme/events';
 
 // The threshold for determining visibility of slides.
 const SLIDE_VISIBLITY_THRESHOLD = 0.7;
+const DRAG_THRESHOLD = 10;
 
 /**
  * Shared viewport observer manager for lazy scroll enablement.
@@ -189,6 +190,11 @@ export class Slideshow extends Component {
   async select(input, event, options = {}) {
     if (this.#disabled || !this.refs.slides?.length) return;
     if (!this.#scroll) return;
+
+    // Let native navigation happen for links inside a slide.
+    if (event?.target instanceof Element && event.target.closest('a[href], area[href]')) {
+      return;
+    }
 
     // Store the actual current slide before any mutations
     const currentSlide = this.slides?.[this.current];
@@ -707,6 +713,9 @@ export class Slideshow extends Component {
       const initialDelta = startPosition - current;
 
       if (!initialDelta) return;
+
+      // Keep click behavior intact unless this becomes a deliberate drag.
+      if (!moved && Math.abs(initialDelta) < DRAG_THRESHOLD) return;
 
       if (!moved) {
         moved = true;
