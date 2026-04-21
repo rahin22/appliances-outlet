@@ -75,9 +75,11 @@
 
 {% stylesheet %}
   .collection-card {
-    --fixed-card-height: var(--height-small);
+    --collection-card-width: 8.5rem;
+    --collection-card-height: 8.5rem;
+    --fixed-card-height: var(--collection-card-height);
 
-    flex: 1 1 var(--card-width-small);
+    flex: 1 1 var(--collection-card-width);
   }
 
   .collection-card > svg {
@@ -116,7 +118,7 @@
   }
 
   .collection-card.collection-card--image-bg .collection-card__content {
-    padding: var(--padding-lg);
+    padding: var(--padding-md);
   }
 
   .collection-card--image-height-fixed {
