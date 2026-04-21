@@ -187,7 +187,7 @@
           "type": "_slide",
           "settings": {
             "media_type_1": "image",
-            "image_1": "shopify://shop_images/13247_TV_Banner_1000X563_59cd1407-c989-4ddf-a9ab-ff083c2a80fe.jpg",
+            "image_1": "shopify://shop_images/045807_15022024_311_C23_Website_SG_TVs_USA_Banner_1.jpg",
             "content_direction": "column",
             "vertical_on_mobile": true,
             "horizontal_alignment": "flex-start",
@@ -284,6 +284,7 @@
           "type": "_slide",
           "settings": {
             "media_type_1": "image",
+            "image_1": "shopify://shop_images/aeg_dig_kitchen_pkgoffer_1000x514_mar26.webp",
             "content_direction": "column",
             "vertical_on_mobile": true,
             "horizontal_alignment": "flex-start",
