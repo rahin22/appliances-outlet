@@ -191,8 +191,48 @@ export class Slideshow extends Component {
     if (this.#disabled || !this.refs.slides?.length) return;
     if (!this.#scroll) return;
 
+    if (event?.type === 'click') {
+      console.log('[slideshow] click select', {
+        input,
+        target: event.target,
+        originalTarget: typeof event.composedPath === 'function' ? event.composedPath()?.[0] : null,
+        defaultPrevented: event.defaultPrevented,
+      });
+    }
+
     // Let native navigation happen for links inside a slide.
-    if (event?.target instanceof Element && event.target.closest('a[href], area[href]')) {
+    const eventPath = typeof event?.composedPath === 'function' ? event.composedPath() : [];
+    const originalTarget =
+      eventPath.length > 0 && eventPath[0] instanceof Element ? eventPath[0] : event?.target instanceof Element ? event.target : null;
+    const clickedSlide = event?.target instanceof Element ? event.target.closest('slideshow-slide') : null;
+    const clickedSlideImageLink = clickedSlide?.querySelector('.slide__image-link[href]');
+    const isActiveSlide = clickedSlide?.getAttribute('aria-hidden') === 'false';
+    const interactiveTarget =
+      originalTarget instanceof Element &&
+      originalTarget.closest('a[href], area[href], button, input, select, textarea, summary, [role="button"], label');
+
+    if (originalTarget instanceof Element && originalTarget.closest('a[href], area[href]')) {
+      return;
+    }
+
+    // If the active slide has an image link, allow overlay/content clicks to navigate to it.
+    if (
+      event?.type === 'click' &&
+      clickedSlideImageLink instanceof HTMLAnchorElement &&
+      isActiveSlide &&
+      !interactiveTarget &&
+      Date.now() >= this.#suppressClickUntil
+    ) {
+      if (clickedSlideImageLink.target === '_blank') {
+        window.open(clickedSlideImageLink.href, '_blank', 'noopener,noreferrer');
+      } else {
+        window.location.assign(clickedSlideImageLink.href);
+      }
+      return;
+    }
+
+    // Ignore click/select actions that are byproducts of a drag release.
+    if (event?.type === 'click' && Date.now() < this.#suppressClickUntil) {
       return;
     }
 
@@ -672,6 +712,9 @@ export class Slideshow extends Component {
 
   #dragging = false;
 
+  // Timestamp guard to prevent drag-release clicks from triggering select or link navigation.
+  #suppressClickUntil = 0;
+
   /**
    * Handles the 'mousedown' event to start dragging slides.
    * @param {MouseEvent} event - The mousedown event.
@@ -700,9 +743,8 @@ export class Slideshow extends Component {
     let previous = startPosition;
     let velocity = 0;
     let moved = false;
+    let pointerCaptured = false;
     let distanceTravelled = 0;
-
-    this.#dragging = true;
 
     /**
      * Handles the 'pointermove' event to update the scroll position.
@@ -720,6 +762,7 @@ export class Slideshow extends Component {
       if (!moved) {
         moved = true;
         this.setPointerCapture(event.pointerId);
+        pointerCaptured = true;
 
         // Prevent clicks once the user starts dragging
         document.addEventListener('click', preventDefault, { once: true, signal });
@@ -738,9 +781,12 @@ export class Slideshow extends Component {
           return;
         }
 
+        this.#dragging = true;
         this.pause();
         this.setAttribute('dragging', '');
       }
+
+      event.preventDefault();
 
       // Stop the event from bubbling up to parent slideshow components
       event.stopImmediatePropagation();
@@ -767,6 +813,14 @@ export class Slideshow extends Component {
 
       if (!slides?.length || !scroller) return;
 
+      if (!moved) {
+        this.#scroll.snap = true;
+        this.resume();
+        return;
+      }
+
+      this.#suppressClickUntil = Date.now() + 350;
+
       const direction = Math.sign(velocity);
       const next = this.#sync();
 
@@ -781,7 +835,9 @@ export class Slideshow extends Component {
       this.#scroll.to(newSlide);
 
       this.removeAttribute('dragging');
-      this.releasePointerCapture(event.pointerId);
+      if (pointerCaptured && this.hasPointerCapture(event.pointerId)) {
+        this.releasePointerCapture(event.pointerId);
+      }
 
       this.#centerSelectedThumbnail(newIndex);
 
