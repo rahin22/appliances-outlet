@@ -27,8 +27,8 @@
             "gap": 12,
             "inherit_color_scheme": false,
             "color_scheme": "scheme-6",
-            "toggle_overlay": true,
-            "overlay_color": "#0000006c",
+            "toggle_overlay": false,
+            "overlay_color": "#0000006b",
             "overlay_style": "solid",
             "gradient_direction": "to top",
             "padding-block-start": 48,
@@ -40,6 +40,7 @@
             "text_cejU8j": {
               "type": "text",
               "name": "t:names.heading",
+              "disabled": true,
               "settings": {
                 "text": "<h3>New arrivals</h3>",
                 "width": "fit-content",
@@ -65,6 +66,7 @@
             },
             "text_JzPAri": {
               "type": "text",
+              "disabled": true,
               "settings": {
                 "text": "<p>Introducing our latest products, made especially for the season. Shop your favorites before they're gone!</p>",
                 "width": "fit-content",
@@ -90,6 +92,7 @@
             },
             "button_N73GEE": {
               "type": "button",
+              "disabled": true,
               "settings": {
                 "label": "Shop now",
                 "link": "shopify://collections/all",
