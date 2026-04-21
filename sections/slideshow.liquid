@@ -32,10 +32,18 @@
       assign section_width_class = section_width_class | append: ' section--mobile-full-width'
     endif
   else
-    assign section_width_class = 'section--' | append: section.settings.section_width
+    if section.settings.constrain_slideshow_width
+      assign section_width_class = 'section--page-width'
+    else
+      assign section_width_class = 'section--' | append: section.settings.section_width
+    endif
   endif
 
   assign slideshow_class = 'slideshow--content-' | append: section.settings.content_position
+  assign media_fit = section.settings.media_fit | default: 'contain'
+  assign media_fit_mobile = section.settings.media_fit_mobile | default: 'contain'
+  assign slideshow_class = slideshow_class | append: ' slideshow--media-fit-' | append: media_fit
+  assign slideshow_class = slideshow_class | append: ' slideshow--media-fit-mobile-' | append: media_fit_mobile
   if section.blocks.size == 1
     assign slideshow_class = slideshow_class | append: ' slideshow--single-media'
   endif
@@ -63,7 +71,7 @@
 
 <div class="section-background color-{{ section.settings.color_scheme }}"></div>
 <div
-  class="slideshow-section spacing-style section {{ section_width_class }} color-{{ section.settings.color_scheme }} disable-section-top-offset"
+  class="slideshow-section spacing-style section {{ section_width_class }} color-{{ section.settings.color_scheme }}"
   style="{% render 'spacing-padding', settings: section.settings %}; --slideshow-gap: {{ section.settings.slideshow_gap }}px;{% if rounded_slide_corners %} --corner-radius: {{ section.settings.corner_radius }}px;{% endif %}"
 >
   <h2 class="visually-hidden">{{ 'accessibility.slideshow' | t }}</h2>
@@ -83,6 +91,8 @@
 
 {% stylesheet %}
   .slideshow-section {
+    --slideshow-nav-gap: var(--padding-xs);
+
     slideshow-arrows .slideshow-control:first-of-type {
       margin-inline-start: var(--padding-xs);
     }
@@ -145,7 +155,7 @@
       }
 
       .slideshow--with-hints slideshow-slide {
-        width: calc((100vw - var(--page-margin) * 2));
+        width: max(0px, calc(100% - var(--page-margin) * 2));
         overflow: hidden;
       }
 
@@ -166,6 +176,10 @@
         pointer-events: none;
       }
     }
+  }
+
+  main > .shopify-section:first-child .slideshow-section {
+    margin-block-start: var(--slideshow-nav-gap);
   }
 {% endstylesheet %}
 
@@ -213,6 +227,13 @@
         }
       ],
       "default": "full-width",
+      "visible_if": "{{ section.settings.display_mode == 'full_frame' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "constrain_slideshow_width",
+      "label": "Constrain slideshow to page width",
+      "default": true,
       "visible_if": "{{ section.settings.display_mode == 'full_frame' }}"
     },
     {
@@ -267,6 +288,38 @@
       ],
       "default": "medium",
       "label": "t:settings.media_height"
+    },
+    {
+      "type": "select",
+      "id": "media_fit",
+      "label": "t:settings.media_fit",
+      "options": [
+        {
+          "value": "cover",
+          "label": "t:options.cover"
+        },
+        {
+          "value": "contain",
+          "label": "t:options.contain"
+        }
+      ],
+      "default": "contain"
+    },
+    {
+      "type": "select",
+      "id": "media_fit_mobile",
+      "label": "Media fit on mobile",
+      "options": [
+        {
+          "value": "cover",
+          "label": "t:options.cover"
+        },
+        {
+          "value": "contain",
+          "label": "t:options.contain"
+        }
+      ],
+      "default": "contain"
     },
     {
       "type": "select",
