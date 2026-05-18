@@ -2384,6 +2384,31 @@ product-price.product-price--main-product .price__sale {
   width: 100%;
 }
 
+.product-card__content > product-price {
+  @media screen and (max-width: 749px) {
+    margin-top: 0.4rem;
+  }
+}
+
+.product-card__content > product-price [ref='priceContainer'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.65rem;
+}
+
+.product-card__content > product-price .price {
+  font-size: clamp(1.1rem, 0.45vw + 0.95rem, 1.4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.product-card__content > product-price .compare-at-price {
+  font-size: clamp(0.9rem, 0.2vw + 0.85rem, 1rem);
+  font-weight: 500;
+}
+
 /* Volume pricing note should match unit-price styling (small, grey text) */
 product-price .volume-pricing-note,
 product-price.text-block:is(.h1, .h2, .h3, .h4, .h5, .h6) .volume-pricing-note {
