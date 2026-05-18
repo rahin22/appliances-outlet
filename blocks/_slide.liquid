@@ -195,6 +195,48 @@
       > :is(.slide__image, .slide__video, .slide__video-poster) {
       object-fit: contain;
     }
+
+    .slide__content {
+      padding: 1.1rem 1rem;
+    }
+
+    .slide__content .group-block-content {
+      width: min(100%, 22rem);
+      max-width: 100%;
+      gap: 0.65rem;
+    }
+
+    .slide__content .text-block.h1 > *,
+    .slide__content .text-block.h1 :is(h1, h2, h3, h4, h5, h6) {
+      font-size: clamp(1.9rem, 7vw, 2.6rem);
+      line-height: 1.05;
+    }
+
+    .slide__content .text-block.h2 > *,
+    .slide__content .text-block.h2 :is(h1, h2, h3, h4, h5, h6) {
+      font-size: clamp(1.55rem, 6vw, 2.15rem);
+      line-height: 1.08;
+    }
+
+    .slide__content .text-block.h3 > *,
+    .slide__content .text-block.h3 :is(h1, h2, h3, h4, h5, h6) {
+      font-size: clamp(1.3rem, 5.4vw, 1.8rem);
+      line-height: 1.12;
+    }
+
+    .slide__content .text-block.rte > *,
+    .slide__content .text-block.paragraph > * {
+      font-size: clamp(0.92rem, 3.2vw, 1rem);
+      line-height: 1.45;
+    }
+
+    .slide__content .button {
+      max-width: 100%;
+      min-height: 40px;
+      padding-inline: 0.9rem;
+      padding-block: 0.65rem;
+      font-size: 0.9rem;
+    }
   }
 
   .slide__image-container > .slide__video-poster {
