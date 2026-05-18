@@ -125,10 +125,11 @@ class HeaderDrawer extends Component {
       drawer || details,
       () => {
         reset(details);
+        const nestedOpenDetails = details.querySelectorAll('details[open]');
+        nestedOpenDetails.forEach(reset);
+
         if (details === this.refs.details) {
           removeTrapFocus();
-          const openDetails = this.querySelectorAll('details[open]:not(accordion-custom > details)');
-          openDetails.forEach(reset);
         } else {
           trapFocus(this.refs.details);
         }
