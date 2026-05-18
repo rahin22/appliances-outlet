@@ -90,6 +90,7 @@
 {% elsif plain_text != blank %}
   {% liquid
     assign rendered_text = block.settings.text
+    assign should_render_vendor_logo = false
     if request.page_type == 'collection'
       assign is_collection_title_text = false
       if rendered_text contains 'closest.collection.title'
@@ -99,21 +100,75 @@
       endif
 
       if is_collection_title_text
-        assign selected_type = request.query_string | split: 'filter.p.product_type=' | last
-        assign selected_type = selected_type | split: '&' | first
-        if selected_type != blank and selected_type != request.query_string
-          assign selected_type = selected_type | replace: '+', ' ' | url_decode
-          if rendered_text contains '</h1>'
-            assign selected_type_suffix = ' - ' | append: selected_type | append: '</h1>'
-            assign rendered_text = rendered_text | replace: '</h1>', selected_type_suffix
+        assign current_vendor = closest.collection.current_vendor | default: collection.current_vendor | strip
+        if current_vendor != blank
+          assign rendered_text = rendered_text | replace: '{{ closest.collection.title }}', current_vendor
+          assign collection_title_fallback = closest.collection.title | default: collection.title
+          assign rendered_text = rendered_text | replace: collection_title_fallback, current_vendor
+
+          assign vendor_handle = current_vendor | handleize
+          assign vendor_brand_definition = metaobjects.vendor_brand
+          if vendor_brand_definition != blank
+            for vendor_brand in vendor_brand_definition.values
+              assign entry_vendor_name = vendor_brand.vendor_name.value | default: vendor_brand.system.handle
+              assign entry_vendor_handle = entry_vendor_name | handleize
+
+              if entry_vendor_handle == vendor_handle
+                assign vendor_heading_logo = vendor_brand.logo.value
+                break
+              endif
+            endfor
+          endif
+
+          if vendor_heading_logo != blank
+            assign should_render_vendor_logo = true
+            assign vendor_heading_logo_alt = vendor_heading_logo.alt | default: current_vendor
+
+            assign vendor_heading_justify = 'flex-start'
+            if text_width == '100%'
+              if block_settings.alignment == 'center'
+                assign vendor_heading_justify = 'center'
+              elsif block_settings.alignment == 'right'
+                assign vendor_heading_justify = 'flex-end'
+              endif
+            endif
+          endif
+        else
+          assign selected_type = request.query_string | split: 'filter.p.product_type=' | last
+          assign selected_type = selected_type | split: '&' | first
+          if selected_type != blank and selected_type != request.query_string
+            assign selected_type = selected_type | replace: '+', ' ' | url_decode
+            if rendered_text contains '</h1>'
+              assign selected_type_suffix = ' - ' | append: selected_type | append: '</h1>'
+              assign rendered_text = rendered_text | replace: '</h1>', selected_type_suffix
+            endif
           endif
         endif
       endif
     endif
   %}
-  <{{ element }} {{ attributes | strip_newlines | strip }}>
-    {{ rendered_text }}
-  </{{ element }}>
+  {% if should_render_vendor_logo %}
+    <div {{ attributes | strip_newlines | strip }}>
+      <div
+        class="vendor-collection-heading"
+        style="--vendor-collection-heading-justify: {{ vendor_heading_justify }};"
+      >
+        {{
+          vendor_heading_logo
+          | image_url: width: 420
+          | image_tag:
+            class: 'vendor-collection-heading__image',
+            widths: '180, 240, 320, 420, 560',
+            loading: 'eager',
+            alt: vendor_heading_logo_alt
+        }}
+      </div>
+    </div>
+  {% else %}
+    <{{ element }} {{ attributes | strip_newlines | strip }}>
+      {{ rendered_text }}
+    </{{ element }}>
+  {% endif %}
 {% endif %}
 
 {% stylesheet %}
@@ -213,6 +268,21 @@
 
   .text-block > *:last-child {
     margin-block-end: 0;
+  }
+
+  .vendor-collection-heading {
+    display: flex;
+    justify-content: var(--vendor-collection-heading-justify, flex-start);
+    width: 100%;
+  }
+
+  .vendor-collection-heading__image {
+    display: block;
+    width: auto;
+    max-width: min(100%, 22rem);
+    max-height: 4.5rem;
+    height: auto;
+    object-fit: contain;
   }
 
   .text-block--align-center,

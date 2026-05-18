@@ -1,0 +1,213 @@
+{%- liquid
+  assign block_settings = block.settings
+  assign vendor_name = closest.product.vendor | strip
+  assign vendor_handle = vendor_name | handleize
+  assign vendor_brand_definition = metaobjects.vendor_brand
+  assign brand_entry = blank
+
+  if vendor_name != blank and vendor_brand_definition != blank
+    for vendor_brand in vendor_brand_definition.values
+      assign entry_vendor_name = vendor_brand.vendor_name.value | default: vendor_brand.system.handle
+      assign entry_vendor_handle = entry_vendor_name | handleize
+
+      if entry_vendor_handle == vendor_handle
+        assign brand_entry = vendor_brand
+        break
+      endif
+    endfor
+  endif
+
+  if block_settings.alignment == 'center'
+    assign justify_content = 'center'
+  elsif block_settings.alignment == 'right'
+    assign justify_content = 'flex-end'
+  else
+    assign justify_content = 'flex-start'
+  endif
+
+  if brand_entry != blank
+    assign brand_logo = brand_entry.logo.value
+    assign brand_logo_alt = brand_logo.alt | default: vendor_name
+  endif
+
+  if vendor_name != blank
+    assign vendor_url = vendor_name | url_for_vendor
+  endif
+-%}
+
+{%- if brand_logo != blank -%}
+  <product-brand-logo
+    class="product-brand-logo spacing-style"
+    style="
+      {% render 'spacing-style', settings: block_settings %}
+      --product-brand-logo-max-width: {{ block_settings.max_width }}px;
+      --product-brand-logo-max-height: {{ block_settings.max_height }}px;
+      --product-brand-logo-justify: {{ justify_content }};
+    "
+    {{ block.shopify_attributes }}
+  >
+    <a
+      class="product-brand-logo__link"
+      href="{{ vendor_url }}"
+      aria-label="View all {{ vendor_name }} products"
+    >
+      {{
+        brand_logo
+        | image_url: width: block_settings.max_width
+        | image_tag:
+          class: 'product-brand-logo__image',
+          widths: '120, 180, 240, 360, 480',
+          loading: 'eager',
+          alt: brand_logo_alt
+      }}
+    </a>
+  </product-brand-logo>
+{%- elsif request.design_mode -%}
+  <product-brand-logo
+    class="product-brand-logo product-brand-logo--placeholder spacing-style"
+    style="
+      {% render 'spacing-style', settings: block_settings %}
+      --product-brand-logo-justify: {{ justify_content }};
+    "
+    {{ block.shopify_attributes }}
+  >
+    <p class="product-brand-logo__placeholder">
+      Add a matching `vendor_brand` entry for {{ vendor_name | default: 'this vendor' }} to show the logo here.
+    </p>
+  </product-brand-logo>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-brand-logo {
+    display: flex;
+    justify-content: var(--product-brand-logo-justify, flex-start);
+    width: 100%;
+  }
+
+  .product-brand-logo__link {
+    display: inline-flex;
+    max-width: 100%;
+  }
+
+  .product-brand-logo__image {
+    display: block;
+    width: auto;
+    max-width: min(100%, var(--product-brand-logo-max-width, 180px));
+    max-height: var(--product-brand-logo-max-height, 56px);
+    height: auto;
+    object-fit: contain;
+  }
+
+  .product-brand-logo__placeholder {
+    margin: 0;
+    width: 100%;
+    border: 1px dashed rgb(var(--color-foreground-rgb) / 0.2);
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Product brand logo",
+  "tag": null,
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Looks up the current product vendor in the vendor_brand metaobject definition and shows the matching logo."
+    },
+    {
+      "type": "select",
+      "id": "alignment",
+      "label": "Alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "label": "Max width",
+      "min": 80,
+      "max": 320,
+      "step": 10,
+      "unit": "px",
+      "default": 180
+    },
+    {
+      "type": "range",
+      "id": "max_height",
+      "label": "Max height",
+      "min": 24,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 56
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "Top padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "Bottom padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "padding-inline-start",
+      "label": "Left padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-inline-end",
+      "label": "Right padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product brand logo"
+    }
+  ]
+}
+{% endschema %}

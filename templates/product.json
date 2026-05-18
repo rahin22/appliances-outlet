@@ -108,6 +108,19 @@
                 "padding-inline-end": 0
               },
               "blocks": {
+                "product_brand_logo_fA3nPd": {
+                  "type": "product-brand-logo",
+                  "settings": {
+                    "alignment": "left",
+                    "max_width": 180,
+                    "max_height": 56,
+                    "padding-block-start": 0,
+                    "padding-block-end": 4,
+                    "padding-inline-start": 0,
+                    "padding-inline-end": 0
+                  },
+                  "blocks": {}
+                },
                 "text_xrnftG": {
                   "type": "text",
                   "name": "Product title",
@@ -170,6 +183,7 @@
                 }
               },
               "block_order": [
+                "product_brand_logo_fA3nPd",
                 "text_xrnftG",
                 "price_tVjtKg",
                 "product_inventory_Ab3kQ1"
