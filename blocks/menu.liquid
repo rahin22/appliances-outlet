@@ -7,6 +7,18 @@
   assign show_store_collections = block_settings.show_store_collections
   assign color_scheme = block_settings.color_scheme
   assign show_as_accordion = block_settings.show_as_accordion
+  assign menu_title = menu.title | default: ''
+  assign normalized_heading = heading | default: menu_title | downcase | strip
+  assign is_brands_menu = false
+  if menu != blank and menu.handle == 'brands'
+    assign is_brands_menu = true
+  elsif normalized_heading == 'brands'
+    assign is_brands_menu = true
+  endif
+  assign should_show_vendor_list = false
+  if show_store_collections == false and is_brands_menu and shop.vendors.size > 0
+    assign should_show_vendor_list = true
+  endif
   if show_as_accordion == true and block_settings.accordion_dividers == true
     assign dividers_enabled = true
   endif
@@ -79,15 +91,26 @@
               {% endif %}
             {% endfor %}
           </ul>
-        {% elsif menu %}
+        {% elsif menu or should_show_vendor_list %}
           <ul class="list-unstyled">
-            {% for link in menu.links %}
-              <li class="menu__item {{ block_settings.link_preset }}">
-                <a href="{{ link.url }}">
-                  {{ link.title }}
-                </a>
-              </li>
-            {% endfor %}
+            {% if menu %}
+              {% for link in menu.links %}
+                <li class="menu__item {{ block_settings.link_preset }}">
+                  <a href="{{ link.url }}">
+                    {{ link.title }}
+                  </a>
+                </li>
+              {% endfor %}
+            {% endif %}
+            {% if should_show_vendor_list %}
+              {% for vendor in shop.vendors %}
+                <li class="menu__item {{ block_settings.link_preset }}">
+                  <a href="{{ vendor | url_for_vendor }}">
+                    {{ vendor | escape }}
+                  </a>
+                </li>
+              {% endfor %}
+            {% endif %}
           </ul>
         {% endif %}
       </nav>

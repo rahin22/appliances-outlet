@@ -39,9 +39,18 @@
             role="list"
           >
             {% for link in block_settings.menu.links %}
+              {% liquid
+                assign nav_bar_link_url = link.url
+                assign nav_bar_link_title = link.title | downcase | strip
+                if link.handle == 'catalog' or nav_bar_link_title == 'catalog'
+                  if link.url contains '/collections/all'
+                    assign nav_bar_link_url = routes.collections_url
+                  endif
+                endif
+              %}
               <li>
                 <a
-                  href="{{ link.url }}"
+                  href="{{ nav_bar_link_url }}"
                   id="MenuItem-{{ link.handle }}"
                   class="menu-list__item"
                   {% if link.current %}
@@ -84,6 +93,27 @@
 
     {% capture children %}
       {% for link in block_settings.menu.links %}
+        {% liquid
+          assign normalized_link_title = link.title | downcase | strip
+          assign has_vendor_submenu = false
+          if shop.vendors.size > 0
+            if link.handle == 'brands' or normalized_link_title == 'brands'
+              assign has_vendor_submenu = true
+            endif
+          endif
+          assign has_catalog_submenu = false
+          if link.handle == 'catalog' or normalized_link_title == 'catalog'
+            assign has_catalog_submenu = true
+          endif
+          assign has_submenu = false
+          if link.links != blank or has_vendor_submenu or has_catalog_submenu
+            assign has_submenu = true
+          endif
+          assign menu_link_url = link.url
+          if has_catalog_submenu and link.url contains '/collections/all'
+            assign menu_link_url = routes.collections_url
+          endif
+        %}
         <li
           role="presentation"
           class="menu-list__list-item"
@@ -93,10 +123,10 @@
           on:pointerleave="/deactivate"
         >
           <a
-            href="{{ link.url }}"
+            href="{{ menu_link_url }}"
             data-skip-node-update="true"
             class="menu-list__link{% if link.active %} menu-list__link--active{% endif %}"
-            {%- if link.links != blank -%}
+            {%- if has_submenu -%}
               aria-controls="submenu-{{ forloop.index }}"
               aria-haspopup="true"
               aria-expanded="false"
@@ -108,7 +138,7 @@
           >
             <span class="menu-list__link-title">{{- link.title -}}</span>
           </a>
-          {%- if link.links != blank -%}
+          {%- if has_submenu -%}
             <div class="menu-list__submenu{{ color_scheme_classes }}" ref="submenu[]">
               <div
                 id="submenu-{{ forloop.index }}"
@@ -120,18 +150,144 @@
                   <div
                     class="mega-menu__grid"
                     data-menu-grid-id="{{ list_id }}"
+                    {% if has_vendor_submenu or has_catalog_submenu %}
+                      style="--menu-columns-desktop: 6; --menu-columns-tablet: 4;"
+                    {% endif %}
                   >
-                    {% render 'mega-menu-list',
-                      parent_link: link,
-                      id: list_id,
-                      section: section,
-                      grid_columns_count: 6,
-                      grid_columns_count_tablet: 4,
-                      grid_columns_count_collection_images: 8,
-                      menu_content_type: menu_content_type,
-                      content_aspect_ratio: ratio,
-                      image_border_radius: image_border_radius
-                    %}
+                    {% if has_vendor_submenu %}
+                      <ul
+                        data-menu-list-id="{{ list_id }}"
+                        class="mega-menu__list list-unstyled"
+                        style="--menu-image-border-radius: {{ image_border_radius }}px; --menu-columns-desktop: 1; --menu-columns-tablet: 1;"
+                      >
+                        <li class="mega-menu__column mega-menu__column--span-1">
+                          <div>
+                            {% for vendor in shop.vendors %}
+                              <a
+                                href="{{ vendor | url_for_vendor }}"
+                                class="mega-menu__link"
+                              >
+                                <span class="wrap-text">{{- vendor | escape -}}</span>
+                              </a>
+                            {% endfor %}
+                          </div>
+                        </li>
+                      </ul>
+                    {% elsif has_catalog_submenu %}
+                      <ul
+                        data-menu-list-id="{{ list_id }}"
+                        class="mega-menu__list list-unstyled"
+                        style="--menu-image-border-radius: {{ image_border_radius }}px; --menu-columns-desktop: 6; --menu-columns-tablet: 4;"
+                      >
+                        {% assign seen_collection_handles = ',' %}
+                        {% if link.links != blank %}
+                          {% assign catalog_links_sorted = link.links | sort_natural: 'title' %}
+                          {% for child_link in catalog_links_sorted %}
+                            {% liquid
+                              assign collection_handle = ''
+                              assign collection_object = ''
+
+                              if child_link.type == 'collection_link' and child_link.object != blank
+                                assign collection_handle = child_link.object.handle
+                                assign collection_object = child_link.object
+                              elsif child_link.url contains '/collections/'
+                                assign collection_handle = child_link.url | split: '/collections/' | last | split: '?' | first | split: '/' | first
+                                assign collection_object = collections[collection_handle]
+                              endif
+
+                              assign dedupe_token = ',' | append: collection_handle | append: ','
+                            %}
+                            {% if collection_handle != blank and collection_handle != 'all' and collection_object != blank and collection_object.all_products_count > 0 %}
+                              {% unless seen_collection_handles contains dedupe_token %}
+                                {% assign seen_collection_handles = seen_collection_handles | append: collection_handle | append: ',' %}
+                                <li class="mega-menu__column mega-menu__column--span-1">
+                                  <div>
+                                    <a
+                                      href="{{ collection_object.url }}"
+                                      class="mega-menu__link mega-menu__link--parent"
+                                    >
+                                      <span class="wrap-text">{{- collection_object.title -}}</span>
+                                    </a>
+                                    {% assign product_type_filter = '' %}
+                                    {% for filter in collection_object.filters %}
+                                      {% if filter.param_name == 'filter.p.product_type' %}
+                                        {% assign product_type_filter = filter %}
+                                        {% break %}
+                                      {% endif %}
+                                    {% endfor %}
+                                    {% if product_type_filter != blank and product_type_filter.values.size > 0 %}
+                                      {% assign product_type_values = product_type_filter.values | sort_natural: 'label' %}
+                                      <ul class="list-unstyled">
+                                        {% for product_type_value in product_type_values %}
+                                          <li>
+                                            <a
+                                              href="{{ collection_object.url }}?{{ product_type_value.param_name }}={{ product_type_value.value | url_encode }}"
+                                              class="mega-menu__link"
+                                            >
+                                              <span class="wrap-text">{{- product_type_value.label -}}</span>
+                                            </a>
+                                          </li>
+                                        {% endfor %}
+                                      </ul>
+                                    {% endif %}
+                                  </div>
+                                </li>
+                              {% endunless %}
+                            {% endif %}
+                          {% endfor %}
+                        {% else %}
+                          {% assign all_collections_sorted = collections | sort_natural: 'title' %}
+                          {% for collection_object in all_collections_sorted %}
+                            {% if collection_object != blank and collection_object.handle != 'all' and collection_object.all_products_count > 0 %}
+                              <li class="mega-menu__column mega-menu__column--span-1">
+                                <div>
+                                  <a
+                                    href="{{ collection_object.url }}"
+                                    class="mega-menu__link mega-menu__link--parent"
+                                  >
+                                    <span class="wrap-text">{{- collection_object.title -}}</span>
+                                  </a>
+                                  {% assign product_type_filter = '' %}
+                                  {% for filter in collection_object.filters %}
+                                    {% if filter.param_name == 'filter.p.product_type' %}
+                                      {% assign product_type_filter = filter %}
+                                      {% break %}
+                                    {% endif %}
+                                  {% endfor %}
+                                  {% if product_type_filter != blank and product_type_filter.values.size > 0 %}
+                                    {% assign product_type_values = product_type_filter.values | sort_natural: 'label' %}
+                                    <ul class="list-unstyled">
+                                      {% for product_type_value in product_type_values %}
+                                        <li>
+                                          <a
+                                            href="{{ collection_object.url }}?{{ product_type_value.param_name }}={{ product_type_value.value | url_encode }}"
+                                            class="mega-menu__link"
+                                          >
+                                            <span class="wrap-text">{{- product_type_value.label -}}</span>
+                                          </a>
+                                        </li>
+                                      {% endfor %}
+                                    </ul>
+                                  {% endif %}
+                                </div>
+                              </li>
+                            {% endif %}
+                          {% endfor %}
+                        {% endif %}
+                      </ul>
+                    {% else %}
+                      {% render 'mega-menu-list',
+                        parent_link: link,
+                        id: list_id,
+                        section: section,
+                        grid_columns_count: 6,
+                        grid_columns_count_tablet: 4,
+                        grid_columns_count_collection_images: 8,
+                        menu_content_type: menu_content_type,
+                        content_aspect_ratio: ratio,
+                        image_border_radius: image_border_radius
+                      %}
+                    {% endif %}
                   </div>
                 </div>
               </div>

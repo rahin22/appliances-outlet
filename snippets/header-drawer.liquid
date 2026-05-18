@@ -102,12 +102,33 @@
             {% assign first_accordion_open = false %}
             {% assign animation_index = 0 %}
             {%- for link in linklist.links -%}
+              {% liquid
+                assign normalized_link_title = link.title | downcase | strip
+                assign has_vendor_submenu = false
+                if shop.vendors.size > 0
+                  if link.handle == 'brands' or normalized_link_title == 'brands'
+                    assign has_vendor_submenu = true
+                  endif
+                endif
+                assign has_catalog_submenu = false
+                if link.handle == 'catalog' or normalized_link_title == 'catalog'
+                  assign has_catalog_submenu = true
+                endif
+                assign link_has_children = false
+                if link.links != blank or has_vendor_submenu or has_catalog_submenu
+                  assign link_has_children = true
+                endif
+                assign menu_link_url = link.url
+                if has_catalog_submenu and link.url contains '/collections/all'
+                  assign menu_link_url = routes.collections_url
+                endif
+              %}
               {% assign animation_index = animation_index | plus: 1 %}
               <li
                 style="--menu-drawer-animation-index: {{ animation_index }};"
                 class="{%- if block_settings.drawer_accordion -%}menu-drawer__list-item--deep{%- else -%}menu-drawer__list-item--flat{%- endif -%}{% if block_settings.drawer_dividers %} menu-drawer__list-item--divider{% endif %}"
               >
-                {% if block_settings.drawer_accordion and link.links != blank %}
+                {% if block_settings.drawer_accordion and link_has_children %}
                   {%- comment -%}
                     Accordion for links with children, in menus with fewer than 3 levels of links
                   {%- endcomment -%}
@@ -133,7 +154,9 @@
                       </summary>
                       {% liquid
                         assign render_link_image = false
-                        if block_settings.menu_style == 'collection_images'
+                        if has_vendor_submenu or has_catalog_submenu
+                          assign render_link_image = false
+                        elsif block_settings.menu_style == 'collection_images'
                           assign catalog_links = link.links | where: 'type', 'catalog_link'
                           assign collection_list_links = link.links | where: 'type', 'collections_link'
                           assign collection_links = link.links | where: 'type', 'collection_link'
@@ -147,30 +170,152 @@
                         role="list"
                         tabindex="-1"
                       >
-                        {%- for childlink in link.links -%}
-                          <li
-                            class="menu-drawer__list-item"
-                            style="--menu-drawer-animation-index: {{ forloop.index }};"
-                          >
-                            <a
-                              id="HeaderDrawer-{{ link.handle }}-{{ childlink.handle }}"
-                              href="{{ childlink.url }}"
-                              class="menu-drawer__menu-item menu-drawer__menu-item--child focus-inset{% if childlink.current %} menu-drawer__menu-item--active{% endif %}"
-                              {% if childlink.current %}
-                                aria-current="page"
-                              {% endif %}
+                        {% if has_vendor_submenu %}
+                          {%- for vendor in shop.vendors -%}
+                            <li
+                              class="menu-drawer__list-item"
+                              style="--menu-drawer-animation-index: {{ forloop.index }};"
                             >
-                              {% if render_link_image %}
-                                {% render 'link-featured-image',
-                                  link: childlink,
-                                  class: 'menu-drawer__link-image',
-                                  sizes: 'auto, 400px'
-                                %}
+                              <a
+                                href="{{ vendor | url_for_vendor }}"
+                                class="menu-drawer__menu-item menu-drawer__menu-item--child focus-inset"
+                              >
+                                <span class="menu-drawer__menu-item-text wrap-text">{{ vendor | escape }}</span>
+                              </a>
+                            </li>
+                          {%- endfor -%}
+                        {% elsif has_catalog_submenu %}
+                          {% assign seen_collection_handles = ',' %}
+                          {% if link.links != blank %}
+                            {% assign catalog_links_sorted = link.links | sort_natural: 'title' %}
+                            {%- for child_link in catalog_links_sorted -%}
+                              {% liquid
+                                assign collection_handle = ''
+                                assign collection_object = ''
+
+                                if child_link.type == 'collection_link' and child_link.object != blank
+                                  assign collection_handle = child_link.object.handle
+                                  assign collection_object = child_link.object
+                                elsif child_link.url contains '/collections/'
+                                  assign collection_handle = child_link.url | split: '/collections/' | last | split: '?' | first | split: '/' | first
+                                  assign collection_object = collections[collection_handle]
+                                endif
+
+                                assign dedupe_token = ',' | append: collection_handle | append: ','
+                              %}
+                              {% if collection_handle != blank and collection_handle != 'all' and collection_object != blank and collection_object.all_products_count > 0 %}
+                                {% unless seen_collection_handles contains dedupe_token %}
+                                  {% assign seen_collection_handles = seen_collection_handles | append: collection_handle | append: ',' %}
+                                  <li
+                                    class="menu-drawer__list-item"
+                                    style="--menu-drawer-animation-index: {{ forloop.index }};"
+                                  >
+                                    <a
+                                      href="{{ collection_object.url }}"
+                                      class="menu-drawer__menu-item menu-drawer__menu-item--parent focus-inset"
+                                    >
+                                      <span class="menu-drawer__menu-item-text wrap-text">{{ collection_object.title | escape }}</span>
+                                    </a>
+                                    {% assign product_type_filter = '' %}
+                                    {% for filter in collection_object.filters %}
+                                      {% if filter.param_name == 'filter.p.product_type' %}
+                                        {% assign product_type_filter = filter %}
+                                        {% break %}
+                                      {% endif %}
+                                    {% endfor %}
+                                    {% if product_type_filter != blank and product_type_filter.values.size > 0 %}
+                                      {% assign product_type_values = product_type_filter.values | sort_natural: 'label' %}
+                                      <ul
+                                        class="menu-drawer__menu menu-drawer__menu--grandchildlist details-content"
+                                        role="list"
+                                        tabindex="-1"
+                                      >
+                                        {%- for product_type_value in product_type_values -%}
+                                          <li class="menu-drawer__list-item">
+                                            <a
+                                              href="{{ collection_object.url }}?{{ product_type_value.param_name }}={{ product_type_value.value | url_encode }}"
+                                              class="menu-drawer__menu-item menu-drawer__menu-item--child focus-inset"
+                                            >
+                                              <span class="menu-drawer__menu-item-text wrap-text">{{ product_type_value.label | escape }}</span>
+                                            </a>
+                                          </li>
+                                        {%- endfor -%}
+                                      </ul>
+                                    {% endif %}
+                                  </li>
+                                {% endunless %}
                               {% endif %}
-                              <span class="menu-drawer__menu-item-text wrap-text">{{ childlink.title | escape }}</span>
-                            </a>
-                          </li>
-                        {%- endfor -%}
+                            {%- endfor -%}
+                          {% else %}
+                            {% assign all_collections_sorted = collections | sort_natural: 'title' %}
+                            {%- for collection_object in all_collections_sorted -%}
+                              {% if collection_object != blank and collection_object.handle != 'all' and collection_object.all_products_count > 0 %}
+                                <li
+                                  class="menu-drawer__list-item"
+                                  style="--menu-drawer-animation-index: {{ forloop.index }};"
+                                >
+                                  <a
+                                    href="{{ collection_object.url }}"
+                                    class="menu-drawer__menu-item menu-drawer__menu-item--parent focus-inset"
+                                  >
+                                    <span class="menu-drawer__menu-item-text wrap-text">{{ collection_object.title | escape }}</span>
+                                  </a>
+                                  {% assign product_type_filter = '' %}
+                                  {% for filter in collection_object.filters %}
+                                    {% if filter.param_name == 'filter.p.product_type' %}
+                                      {% assign product_type_filter = filter %}
+                                      {% break %}
+                                    {% endif %}
+                                  {% endfor %}
+                                  {% if product_type_filter != blank and product_type_filter.values.size > 0 %}
+                                    {% assign product_type_values = product_type_filter.values | sort_natural: 'label' %}
+                                    <ul
+                                      class="menu-drawer__menu menu-drawer__menu--grandchildlist details-content"
+                                      role="list"
+                                      tabindex="-1"
+                                    >
+                                      {%- for product_type_value in product_type_values -%}
+                                        <li class="menu-drawer__list-item">
+                                          <a
+                                            href="{{ collection_object.url }}?{{ product_type_value.param_name }}={{ product_type_value.value | url_encode }}"
+                                            class="menu-drawer__menu-item menu-drawer__menu-item--child focus-inset"
+                                          >
+                                            <span class="menu-drawer__menu-item-text wrap-text">{{ product_type_value.label | escape }}</span>
+                                          </a>
+                                        </li>
+                                      {%- endfor -%}
+                                    </ul>
+                                  {% endif %}
+                                </li>
+                              {% endif %}
+                            {%- endfor -%}
+                          {% endif %}
+                        {% else %}
+                          {%- for childlink in link.links -%}
+                            <li
+                              class="menu-drawer__list-item"
+                              style="--menu-drawer-animation-index: {{ forloop.index }};"
+                            >
+                              <a
+                                id="HeaderDrawer-{{ link.handle }}-{{ childlink.handle }}"
+                                href="{{ childlink.url }}"
+                                class="menu-drawer__menu-item menu-drawer__menu-item--child focus-inset{% if childlink.current %} menu-drawer__menu-item--active{% endif %}"
+                                {% if childlink.current %}
+                                  aria-current="page"
+                                {% endif %}
+                              >
+                                {% if render_link_image %}
+                                  {% render 'link-featured-image',
+                                    link: childlink,
+                                    class: 'menu-drawer__link-image',
+                                    sizes: 'auto, 400px'
+                                  %}
+                                {% endif %}
+                                <span class="menu-drawer__menu-item-text wrap-text">{{ childlink.title | escape }}</span>
+                              </a>
+                            </li>
+                          {%- endfor -%}
+                        {% endif %}
                       </ul>
                     </details>
                   {% endcapture %}
@@ -178,13 +323,13 @@
                     children: accordion_children,
                     open_by_default_on_mobile: should_open_first
                   %}
-                {% elsif block_settings.drawer_accordion == false and link.links != blank %}
+                {% elsif block_settings.drawer_accordion == false and link_has_children %}
                   {%- comment -%}
                     Flat menus for links with children, in menus with fewer than 3 levels of links
                   {%- endcomment -%}
                   <a
                     id="HeaderDrawer-{{ link.handle }}"
-                    href="{{ link.url }}"
+                    href="{{ menu_link_url }}"
                     class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset"
                     {% if link.current %}
                       aria-current="page"
@@ -194,7 +339,9 @@
                   </a>
                   {% liquid
                     assign render_link_image = false
-                    if block_settings.menu_style == 'collection_images'
+                    if has_vendor_submenu or has_catalog_submenu
+                      assign render_link_image = false
+                    elsif block_settings.menu_style == 'collection_images'
                       assign catalog_links = link.links | where: 'type', 'catalog_link'
                       assign collection_list_links = link.links | where: 'type', 'collections_link'
                       assign collection_links = link.links | where: 'type', 'collection_link'
@@ -208,29 +355,151 @@
                     role="list"
                     tabindex="-1"
                   >
-                    {%- for childlink in link.links -%}
-                      <li
-                        class="menu-drawer__list-item"
-                        style="--menu-drawer-animation-index: {{ animation_index }};"
-                      >
-                        <a
-                          href="{{ childlink.url }}"
-                          class="menu-drawer__menu-item menu-drawer__menu-item--child menu-drawer__animated-element focus-inset{% if childlink.current %} menu-drawer__menu-item--active{% endif %}"
-                          {% if childlink.current %}
-                            aria-current="page"
-                          {% endif %}
+                    {% if has_vendor_submenu %}
+                      {%- for vendor in shop.vendors -%}
+                        <li
+                          class="menu-drawer__list-item"
+                          style="--menu-drawer-animation-index: {{ animation_index }};"
                         >
-                          {% if render_link_image %}
-                            {% render 'link-featured-image',
-                              link: childlink,
-                              class: 'menu-drawer__link-image',
-                              sizes: 'auto, 400px'
-                            %}
+                          <a
+                            href="{{ vendor | url_for_vendor }}"
+                            class="menu-drawer__menu-item menu-drawer__menu-item--child menu-drawer__animated-element focus-inset"
+                          >
+                            <span class="menu-drawer__menu-item-text wrap-text">{{ vendor | escape }}</span>
+                          </a>
+                        </li>
+                      {%- endfor -%}
+                    {% elsif has_catalog_submenu %}
+                      {% assign seen_collection_handles = ',' %}
+                      {% if link.links != blank %}
+                        {% assign catalog_links_sorted = link.links | sort_natural: 'title' %}
+                        {%- for child_link in catalog_links_sorted -%}
+                          {% liquid
+                            assign collection_handle = ''
+                            assign collection_object = ''
+
+                            if child_link.type == 'collection_link' and child_link.object != blank
+                              assign collection_handle = child_link.object.handle
+                              assign collection_object = child_link.object
+                            elsif child_link.url contains '/collections/'
+                              assign collection_handle = child_link.url | split: '/collections/' | last | split: '?' | first | split: '/' | first
+                              assign collection_object = collections[collection_handle]
+                            endif
+
+                            assign dedupe_token = ',' | append: collection_handle | append: ','
+                          %}
+                          {% if collection_handle != blank and collection_handle != 'all' and collection_object != blank and collection_object.all_products_count > 0 %}
+                            {% unless seen_collection_handles contains dedupe_token %}
+                              {% assign seen_collection_handles = seen_collection_handles | append: collection_handle | append: ',' %}
+                              <li
+                                class="menu-drawer__list-item"
+                                style="--menu-drawer-animation-index: {{ forloop.index }};"
+                              >
+                                <a
+                                  href="{{ collection_object.url }}"
+                                  class="menu-drawer__menu-item menu-drawer__menu-item--parent menu-drawer__animated-element focus-inset"
+                                >
+                                  <span class="menu-drawer__menu-item-text wrap-text">{{ collection_object.title | escape }}</span>
+                                </a>
+                                {% assign product_type_filter = '' %}
+                                {% for filter in collection_object.filters %}
+                                  {% if filter.param_name == 'filter.p.product_type' %}
+                                    {% assign product_type_filter = filter %}
+                                    {% break %}
+                                  {% endif %}
+                                {% endfor %}
+                                {% if product_type_filter != blank and product_type_filter.values.size > 0 %}
+                                  {% assign product_type_values = product_type_filter.values | sort_natural: 'label' %}
+                                  <ul
+                                    class="menu-drawer__menu menu-drawer__menu--grandchildlist details-content"
+                                    role="list"
+                                    tabindex="-1"
+                                  >
+                                    {%- for product_type_value in product_type_values -%}
+                                      <li class="menu-drawer__list-item">
+                                        <a
+                                          href="{{ collection_object.url }}?{{ product_type_value.param_name }}={{ product_type_value.value | url_encode }}"
+                                          class="menu-drawer__menu-item menu-drawer__menu-item--child menu-drawer__animated-element focus-inset"
+                                        >
+                                          <span class="menu-drawer__menu-item-text wrap-text">{{ product_type_value.label | escape }}</span>
+                                        </a>
+                                      </li>
+                                    {%- endfor -%}
+                                  </ul>
+                                {% endif %}
+                              </li>
+                            {% endunless %}
                           {% endif %}
-                          <span class="menu-drawer__menu-item-text wrap-text">{{ childlink.title | escape }}</span>
-                        </a>
-                      </li>
-                    {%- endfor -%}
+                        {%- endfor -%}
+                      {% else %}
+                        {% assign all_collections_sorted = collections | sort_natural: 'title' %}
+                        {%- for collection_object in all_collections_sorted -%}
+                          {% if collection_object != blank and collection_object.handle != 'all' and collection_object.all_products_count > 0 %}
+                            <li
+                              class="menu-drawer__list-item"
+                              style="--menu-drawer-animation-index: {{ forloop.index }};"
+                            >
+                              <a
+                                href="{{ collection_object.url }}"
+                                class="menu-drawer__menu-item menu-drawer__menu-item--parent menu-drawer__animated-element focus-inset"
+                              >
+                                <span class="menu-drawer__menu-item-text wrap-text">{{ collection_object.title | escape }}</span>
+                              </a>
+                              {% assign product_type_filter = '' %}
+                              {% for filter in collection_object.filters %}
+                                {% if filter.param_name == 'filter.p.product_type' %}
+                                  {% assign product_type_filter = filter %}
+                                  {% break %}
+                                {% endif %}
+                              {% endfor %}
+                              {% if product_type_filter != blank and product_type_filter.values.size > 0 %}
+                                {% assign product_type_values = product_type_filter.values | sort_natural: 'label' %}
+                                <ul
+                                  class="menu-drawer__menu menu-drawer__menu--grandchildlist details-content"
+                                  role="list"
+                                  tabindex="-1"
+                                >
+                                  {%- for product_type_value in product_type_values -%}
+                                    <li class="menu-drawer__list-item">
+                                      <a
+                                        href="{{ collection_object.url }}?{{ product_type_value.param_name }}={{ product_type_value.value | url_encode }}"
+                                        class="menu-drawer__menu-item menu-drawer__menu-item--child menu-drawer__animated-element focus-inset"
+                                      >
+                                        <span class="menu-drawer__menu-item-text wrap-text">{{ product_type_value.label | escape }}</span>
+                                      </a>
+                                    </li>
+                                  {%- endfor -%}
+                                </ul>
+                              {% endif %}
+                            </li>
+                          {% endif %}
+                        {%- endfor -%}
+                      {% endif %}
+                    {% else %}
+                      {%- for childlink in link.links -%}
+                        <li
+                          class="menu-drawer__list-item"
+                          style="--menu-drawer-animation-index: {{ animation_index }};"
+                        >
+                          <a
+                            href="{{ childlink.url }}"
+                            class="menu-drawer__menu-item menu-drawer__menu-item--child menu-drawer__animated-element focus-inset{% if childlink.current %} menu-drawer__menu-item--active{% endif %}"
+                            {% if childlink.current %}
+                              aria-current="page"
+                            {% endif %}
+                          >
+                            {% if render_link_image %}
+                              {% render 'link-featured-image',
+                                link: childlink,
+                                class: 'menu-drawer__link-image',
+                                sizes: 'auto, 400px'
+                              %}
+                            {% endif %}
+                            <span class="menu-drawer__menu-item-text wrap-text">{{ childlink.title | escape }}</span>
+                          </a>
+                        </li>
+                      {%- endfor -%}
+                    {% endif %}
                   </ul>
                 {% else %}
                   {%- comment -%}
@@ -238,7 +507,7 @@
                   {%- endcomment -%}
                   <a
                     id="HeaderDrawer-{{ link.handle }}"
-                    href="{{ link.url }}"
+                    href="{{ menu_link_url }}"
                     class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset"
                     {% if link.current %}
                       aria-current="page"
