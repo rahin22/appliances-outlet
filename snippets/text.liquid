@@ -88,8 +88,31 @@
     {{ fallback_text }}
   </div>
 {% elsif plain_text != blank %}
+  {% liquid
+    assign rendered_text = block.settings.text
+    if request.page_type == 'collection'
+      assign is_collection_title_text = false
+      if rendered_text contains 'closest.collection.title'
+        assign is_collection_title_text = true
+      elsif rendered_text contains closest.collection.title
+        assign is_collection_title_text = true
+      endif
+
+      if is_collection_title_text
+        assign selected_type = request.query_string | split: 'filter.p.product_type=' | last
+        assign selected_type = selected_type | split: '&' | first
+        if selected_type != blank and selected_type != request.query_string
+          assign selected_type = selected_type | replace: '+', ' ' | url_decode
+          if rendered_text contains '</h1>'
+            assign selected_type_suffix = ' - ' | append: selected_type | append: '</h1>'
+            assign rendered_text = rendered_text | replace: '</h1>', selected_type_suffix
+          endif
+        endif
+      endif
+    endif
+  %}
   <{{ element }} {{ attributes | strip_newlines | strip }}>
-    {{ block.settings.text }}
+    {{ rendered_text }}
   </{{ element }}>
 {% endif %}
 

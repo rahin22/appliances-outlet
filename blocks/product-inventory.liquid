@@ -52,7 +52,7 @@
   data-product-id="{{ product.id }}"
 >
   <span
-    class="product-inventory__status"
+    class="product-inventory__status product-inventory__status--{{ status }}"
   >
     <span
       class="svg-wrapper product-inventory__icon product-inventory__icon-{{ status }}"
@@ -76,11 +76,16 @@
 
 {% stylesheet %}
   .product-inventory__status {
+    width: fit-content;
     display: flex;
     align-items: center;
     font-size: var(--font-paragraph--size);
     line-height: var(--font-paragraph--line-height);
     gap: var(--padding-xs);
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    font-weight: 600;
+    border: 1px solid transparent;
   }
 
   .product-inventory__icon,
@@ -103,6 +108,24 @@
 
   .product-inventory__icon circle:first-of-type {
     opacity: 0.3;
+  }
+
+  .product-inventory__status--in_stock {
+    color: var(--color-instock);
+    background-color: rgb(var(--color-success-rgb, 46 125 50) / 0.1);
+    border-color: rgb(var(--color-success-rgb, 46 125 50) / 0.2);
+  }
+
+  .product-inventory__status--low {
+    color: var(--color-lowstock);
+    background-color: rgb(var(--color-warning-rgb, 237 145 33) / 0.12);
+    border-color: rgb(var(--color-warning-rgb, 237 145 33) / 0.24);
+  }
+
+  .product-inventory__status--out_of_stock {
+    color: var(--color-outofstock);
+    background-color: rgb(var(--color-error-rgb, 198 40 40) / 0.1);
+    border-color: rgb(var(--color-error-rgb, 198 40 40) / 0.2);
   }
 {% endstylesheet %}
 

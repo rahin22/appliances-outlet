@@ -210,18 +210,19 @@
                                     </a>
                                     {% assign product_type_filter = '' %}
                                     {% for filter in collection_object.filters %}
-                                      {% if filter.param_name == 'filter.p.product_type' %}
+                                      {% if filter.param_name == 'filter.p.product_type' and filter.values.size > 0 %}
                                         {% assign product_type_filter = filter %}
                                         {% break %}
                                       {% endif %}
                                     {% endfor %}
-                                    {% if product_type_filter != blank and product_type_filter.values.size > 0 %}
+                                    {% if product_type_filter != blank %}
                                       {% assign product_type_values = product_type_filter.values | sort_natural: 'label' %}
                                       <ul class="list-unstyled">
                                         {% for product_type_value in product_type_values %}
+                                          {% assign type_query = product_type_value.param_name | append: '=' | append: product_type_value.value | url_encode %}
                                           <li>
                                             <a
-                                              href="{{ collection_object.url }}?{{ product_type_value.param_name }}={{ product_type_value.value | url_encode }}"
+                                              href="{{ collection_object.url }}?{{ type_query }}&sort_by=most-relevant&grid=default"
                                               class="mega-menu__link"
                                             >
                                               <span class="wrap-text">{{- product_type_value.label -}}</span>
@@ -229,6 +230,22 @@
                                           </li>
                                         {% endfor %}
                                       </ul>
+                                    {% else %}
+                                      {% assign product_types = collection_object.all_types | sort_natural %}
+                                      {% if product_types.size > 0 %}
+                                        <ul class="list-unstyled">
+                                          {% for product_type in product_types %}
+                                            <li>
+                                              <a
+                                                href="{{ collection_object.url }}?filter.p.product_type={{ product_type | url_encode }}&sort_by=most-relevant&grid=default"
+                                                class="mega-menu__link"
+                                              >
+                                                <span class="wrap-text">{{- product_type -}}</span>
+                                              </a>
+                                            </li>
+                                          {% endfor %}
+                                        </ul>
+                                      {% endif %}
                                     {% endif %}
                                   </div>
                                 </li>
@@ -249,18 +266,19 @@
                                   </a>
                                   {% assign product_type_filter = '' %}
                                   {% for filter in collection_object.filters %}
-                                    {% if filter.param_name == 'filter.p.product_type' %}
+                                    {% if filter.param_name == 'filter.p.product_type' and filter.values.size > 0 %}
                                       {% assign product_type_filter = filter %}
                                       {% break %}
                                     {% endif %}
                                   {% endfor %}
-                                  {% if product_type_filter != blank and product_type_filter.values.size > 0 %}
+                                  {% if product_type_filter != blank %}
                                     {% assign product_type_values = product_type_filter.values | sort_natural: 'label' %}
                                     <ul class="list-unstyled">
                                       {% for product_type_value in product_type_values %}
+                                        {% assign type_query = product_type_value.param_name | append: '=' | append: product_type_value.value | url_encode %}
                                         <li>
                                           <a
-                                            href="{{ collection_object.url }}?{{ product_type_value.param_name }}={{ product_type_value.value | url_encode }}"
+                                            href="{{ collection_object.url }}?{{ type_query }}&sort_by=most-relevant&grid=default"
                                             class="mega-menu__link"
                                           >
                                             <span class="wrap-text">{{- product_type_value.label -}}</span>
@@ -268,6 +286,22 @@
                                         </li>
                                       {% endfor %}
                                     </ul>
+                                  {% else %}
+                                    {% assign product_types = collection_object.all_types | sort_natural %}
+                                    {% if product_types.size > 0 %}
+                                      <ul class="list-unstyled">
+                                        {% for product_type in product_types %}
+                                          <li>
+                                            <a
+                                              href="{{ collection_object.url }}?filter.p.product_type={{ product_type | url_encode }}&sort_by=most-relevant&grid=default"
+                                              class="mega-menu__link"
+                                            >
+                                              <span class="wrap-text">{{- product_type -}}</span>
+                                            </a>
+                                          </li>
+                                        {% endfor %}
+                                      </ul>
+                                    {% endif %}
                                   {% endif %}
                                 </div>
                               </li>

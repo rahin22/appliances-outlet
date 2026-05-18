@@ -24,6 +24,110 @@
   {% content_for 'blocks' %}
 {% endcapture %}
 
+{% capture product_tabs %}
+  {% if closest.product != blank %}
+    <div
+      id="ProductInfoAccordion-{{ section.id }}"
+      class="product-information__tabs-wrapper product-information__accordion"
+      data-product-info-accordion
+    >
+      <details class="product-information__accordion-item" open>
+        <summary class="product-information__accordion-summary">
+          <span class="product-information__accordion-title">Description</span>
+          <span
+            class="product-information__accordion-icon"
+            aria-hidden="true"
+          >
+            <span class="product-information__accordion-icon-line product-information__accordion-icon-line--horizontal"></span>
+            <span class="product-information__accordion-icon-line product-information__accordion-icon-line--vertical"></span>
+          </span>
+        </summary>
+        <div class="product-information__accordion-content rte">
+          {% assign description_lines = closest.product.description | strip_html | newline_to_br | split: '<br />' %}
+          {% assign normalized_description = '' %}
+          {% assign pending_key = '' %}
+          {% for raw_line in description_lines %}
+            {% assign line = raw_line | strip %}
+            {% assign line_last_char = line | slice: -1, 1 %}
+            {% if line == blank %}
+              {% continue %}
+            {% endif %}
+
+            {% if pending_key != blank %}
+              {%- capture normalized_description -%}{{ normalized_description }}{{ pending_key | escape }} {{ line | escape }}<br>{%- endcapture -%}
+              {% assign pending_key = '' %}
+            {% elsif line_last_char == ':' %}
+              {% assign pending_key = line %}
+            {% else %}
+              {%- capture normalized_description -%}{{ normalized_description }}{{ line | escape }}<br>{%- endcapture -%}
+            {% endif %}
+          {% endfor %}
+          {% if pending_key != blank %}
+            {%- capture normalized_description -%}{{ normalized_description }}{{ pending_key | escape }}{%- endcapture -%}
+          {% endif %}
+          {{ normalized_description }}
+        </div>
+      </details>
+
+      <details class="product-information__accordion-item">
+        <summary class="product-information__accordion-summary">
+          <span class="product-information__accordion-title">Additional information</span>
+          <span
+            class="product-information__accordion-icon"
+            aria-hidden="true"
+          >
+            <span class="product-information__accordion-icon-line product-information__accordion-icon-line--horizontal"></span>
+            <span class="product-information__accordion-icon-line product-information__accordion-icon-line--vertical"></span>
+          </span>
+        </summary>
+        <div class="product-information__accordion-content">
+          {% assign condition_tags = '' | split: '' %}
+          {% for tag in closest.product.tags %}
+            {% assign normalized_tag = tag | strip | downcase %}
+            {% assign matched_condition = '' %}
+            {% if normalized_tag == 'factory seconds' %}
+              {% assign matched_condition = 'Factory Seconds' %}
+            {% elsif normalized_tag == 'carton damage' %}
+              {% assign matched_condition = 'Carton Damage' %}
+            {% elsif normalized_tag == 'a+ factory seconds' %}
+              {% assign matched_condition = 'A+ Factory Seconds' %}
+            {% endif %}
+            {% if matched_condition != '' %}
+              {% unless condition_tags contains matched_condition %}
+                {% assign matched_condition_array = matched_condition | split: '||' %}
+                {% assign condition_tags = condition_tags | concat: matched_condition_array %}
+              {% endunless %}
+            {% endif %}
+          {% endfor %}
+          {% assign condition_value = 'N/A' %}
+          {% if condition_tags.size > 0 %}
+            {% assign condition_value = condition_tags | join: ', ' %}
+          {% endif %}
+          {% assign brand_value = closest.product.vendor | default: 'N/A' %}
+          {% assign product_type_value = closest.product.type | default: 'N/A' %}
+          <table class="product-information__additional-table">
+            <tbody>
+              <tr>
+                <th scope="row">Condition</th>
+                <td>{{ condition_value | escape }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Brand</th>
+                <td>{{ brand_value | escape }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Product Type</th>
+                <td>{{ product_type_value | escape }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  {% endif %}
+{% endcapture %}
+{% assign additional_blocks = additional_blocks | append: product_tabs %}
+
 {% if section.settings.enable_sticky_add_to_cart %}
   {% liquid
     assign current_variant = product.selected_or_first_available_variant
@@ -282,6 +386,184 @@
   .sticky-add-to-cart__button {
     height: var(--height-buy-buttons);
     position: relative;
+  }
+
+  .product-information__tabs-wrapper {
+    grid-column: 1 / -1;
+    padding-top: calc(var(--padding-xl) + 0.25rem);
+    padding-inline: var(--padding-lg);
+    display: grid;
+    gap: 0.95rem;
+  }
+
+  .product-information__accordion-item {
+    border: 1px solid rgb(var(--color-foreground-rgb) / 0.1);
+    border-radius: 1.15rem;
+    background:
+      linear-gradient(180deg, rgb(var(--color-background-rgb)) 0%, rgb(var(--color-foreground-rgb) / 0.025) 100%);
+    overflow: clip;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .product-information__accordion-item:hover {
+    border-color: rgb(var(--color-foreground-rgb) / 0.16);
+  }
+
+  .product-information__accordion-item[open] {
+    border-color: rgb(var(--color-foreground-rgb) / 0.18);
+  }
+
+  .product-information__accordion-summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 1rem 1.15rem;
+    font-weight: var(--font-heading--weight);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    transition: background-color 0.2s ease;
+  }
+
+  .product-information__accordion-item:hover .product-information__accordion-summary {
+    background-color: rgb(var(--color-foreground-rgb) / 0.018);
+  }
+
+  .product-information__accordion-item[open] .product-information__accordion-summary {
+    background-color: rgb(var(--color-foreground-rgb) / 0.03);
+    border-bottom: 1px solid rgb(var(--color-foreground-rgb) / 0.08);
+  }
+
+  .product-information__accordion-title {
+    flex: 1;
+    font-size: 1rem;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+  }
+
+  .product-information__accordion-summary::marker {
+    content: '';
+  }
+
+  .product-information__accordion-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .product-information__accordion-icon {
+    width: 2.1rem;
+    height: 2.1rem;
+    min-width: 2.1rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-left: auto;
+    background-color: rgb(var(--color-foreground-rgb) / 0.06);
+    color: rgb(var(--color-foreground-rgb));
+    transition:
+      transform 0.2s ease,
+      background-color 0.2s ease;
+  }
+
+  .product-information__accordion-item[open] .product-information__accordion-icon {
+    background-color: rgb(var(--color-foreground-rgb) / 0.1);
+  }
+
+  .product-information__accordion-icon-line {
+    position: absolute;
+    display: block;
+    background-color: currentColor;
+    border-radius: 999px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .product-information__accordion-icon-line--horizontal {
+    width: 0.8rem;
+    height: 2px;
+  }
+
+  .product-information__accordion-icon-line--vertical {
+    width: 2px;
+    height: 0.8rem;
+  }
+
+  .product-information__accordion-item[open] .product-information__accordion-icon-line--vertical {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+
+  .product-information__accordion-content {
+    padding: 1rem 1.15rem 1.2rem;
+    color: rgb(var(--color-foreground-rgb) / 0.82);
+  }
+
+  .product-information__accordion-content.rte {
+    line-height: 1.75;
+  }
+
+  .product-information__accordion-content.rte br + br {
+    content: '';
+    display: block;
+    margin-top: 0.45rem;
+  }
+
+  .product-information__additional-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    background-color: rgb(var(--color-background-rgb) / 0.88);
+    border: 1px solid rgb(var(--color-foreground-rgb) / 0.08);
+    border-radius: 0.95rem;
+    overflow: hidden;
+  }
+
+  .product-information__additional-table th,
+  .product-information__additional-table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid rgb(var(--color-foreground-rgb) / 0.08);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .product-information__additional-table tr:last-child th,
+  .product-information__additional-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .product-information__additional-table th {
+    width: 10rem;
+    color: rgb(var(--color-foreground-rgb) / 0.58);
+    font-weight: var(--font-heading--weight);
+    padding-right: var(--padding-md);
+  }
+
+  .product-information__additional-table td {
+    color: rgb(var(--color-foreground-rgb));
+    font-weight: 500;
+  }
+
+  @media screen and (max-width: 749px) {
+    .product-information__tabs-wrapper {
+      padding-inline: var(--padding-md);
+    }
+
+    .product-information__accordion-summary {
+      padding: 0.95rem 0.95rem;
+    }
+
+    .product-information__accordion-content {
+      padding: 0.95rem 0.95rem 1rem;
+    }
+
+    .product-information__additional-table th {
+      width: 6.5rem;
+    }
+
+    .product-information__additional-table th,
+    .product-information__additional-table td {
+      padding: 0.8rem 0.85rem;
+    }
   }
 
   /* Mobile adjustments */

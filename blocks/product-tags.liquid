@@ -1,0 +1,104 @@
+{%- liquid
+  assign block_settings = block.settings
+  assign product_resource = closest.product
+  assign product_tags = product_resource.tags
+-%}
+
+<div
+  class="product-tags-block spacing-style"
+  style="{% if product_tags.size == 0 %}display: none;{% endif %}{% render 'spacing-style', settings: block_settings %}"
+  {{ block.shopify_attributes }}
+>
+  {%- if product_tags.size > 0 -%}
+    <p class="product-tags-block__heading">Tags:</p>
+    <div class="product-tags-block__items">
+      {%- for tag in product_tags -%}
+        <span class="pills__pill product-tags-block__pill">
+          {{- tag | escape -}}
+        </span>
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  .product-tags-block__heading {
+    margin: 0 0 0.65rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .product-tags-block__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  .product-tags-block__pill {
+    cursor: default;
+    min-width: 0;
+    justify-content: center;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Product tags",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "Top padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "Bottom padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-inline-start",
+      "label": "Left padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-inline-end",
+      "label": "Right padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product tags"
+    }
+  ]
+}
+{% endschema %}

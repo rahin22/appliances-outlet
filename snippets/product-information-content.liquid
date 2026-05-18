@@ -74,6 +74,31 @@
     when 'content-full-width'
       assign content_width = 'full-width'
   endcase
+
+  if request.page_type == 'product' and product != blank
+    assign breadcrumb_collection = collection
+
+    if breadcrumb_collection == blank or breadcrumb_collection.handle == 'all' or breadcrumb_collection.handle == 'frontpage'
+      for product_collection in product.collections
+        if product_collection.handle != 'all' and product_collection.handle != 'frontpage'
+          assign breadcrumb_collection = product_collection
+          break
+        endif
+      endfor
+    endif
+
+    assign breadcrumb_collection_title = 'Products'
+    assign breadcrumb_collection_url = routes.all_products_collection_url
+
+    if breadcrumb_collection != blank
+      assign breadcrumb_collection_title = breadcrumb_collection.title
+      assign breadcrumb_collection_url = breadcrumb_collection.url
+    endif
+
+    assign breadcrumb_product_type = product.type | strip
+    assign breadcrumb_product_type_param = breadcrumb_product_type | url_encode
+    assign breadcrumb_product_type_url = breadcrumb_collection_url | append: '?filter.p.product_type=' | append: breadcrumb_product_type_param | append: '&sort_by=most-relevant&grid=default'
+  endif
 %}
 
 <div class="section-background color-{{ settings.color_scheme }}"></div>
@@ -85,6 +110,37 @@
   {% if settings.desktop_media_position == 'left' and product_has_media and request.page_type == 'product' %}
     {% assign product_href = '#ProductInformation-' | append: section_id %}
     {% render 'skip-to-content-link', href: product_href, text: 'accessibility.skip_to_product_info' %}
+  {% endif %}
+  {% if request.page_type == 'product' and product != blank %}
+    <nav
+      class="product-information__breadcrumbs"
+      aria-label="Breadcrumb"
+    >
+      <a href="{{ routes.root_url }}">Home</a>
+      <span
+        class="product-information__breadcrumbs-separator"
+        aria-hidden="true"
+      >
+        &gt;
+      </span>
+      <a href="{{ breadcrumb_collection_url }}">{{ breadcrumb_collection_title | escape }}</a>
+      {% if breadcrumb_product_type != blank %}
+        <span
+          class="product-information__breadcrumbs-separator"
+          aria-hidden="true"
+        >
+          &gt;
+        </span>
+        <a href="{{ breadcrumb_product_type_url }}">{{ breadcrumb_product_type | escape }}</a>
+      {% endif %}
+      <span
+        class="product-information__breadcrumbs-separator"
+        aria-hidden="true"
+      >
+        &gt;
+      </span>
+      <span aria-current="page">{{ product.title | escape }}</span>
+    </nav>
   {% endif %}
   <div
     class="{{ product_grid_class }}"
@@ -115,6 +171,38 @@
 {% stylesheet %}
   .product-information {
     gap: var(--gap) 0;
+  }
+
+  .product-information__breadcrumbs {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding-top: clamp(0.75rem, 1.4vw, 1.25rem);
+    margin-bottom: clamp(0.9rem, 1vw, 1.2rem);
+    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
+    font-size: 0.92rem;
+    line-height: 1.4;
+  }
+
+  .product-information__breadcrumbs a {
+    color: inherit;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .product-information__breadcrumbs a:hover {
+    opacity: 0.72;
+  }
+
+  .product-information__breadcrumbs [aria-current='page'] {
+    color: rgb(var(--color-foreground-rgb));
+    font-weight: 600;
+  }
+
+  .product-information__breadcrumbs-separator {
+    opacity: 0.45;
   }
 
   /* Base grid layout */
@@ -153,6 +241,28 @@
 
   /* Desktop styles */
   @media screen and (min-width: 750px) {
+    .product-information__breadcrumbs {
+      grid-column: 2;
+    }
+
+    .product-information__media {
+      margin-top: -0.35rem;
+      align-self: start;
+    }
+
+    .product-information__media .product-media-container.constrain-height {
+      max-height: clamp(340px, 52vh, 470px);
+    }
+
+    .product-information__media media-gallery {
+      --slideshow-thumbnails-padding-inline: 0;
+      --slideshow-thumbnails-padding-block: 0.35rem;
+    }
+
+    .product-information__media .slideshow-controls__thumbnails {
+      gap: 0.4rem;
+    }
+
     .product-information__grid {
       grid-column: 2;
     }

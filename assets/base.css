@@ -2360,6 +2360,30 @@ product-price.text-block:is(.h1, .h2, .h3, .h4, .h5, .h6) > *:not(.tax-note) {
   margin-block: 0;
 }
 
+product-price.product-price--main-product [ref='priceContainer'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.85rem;
+}
+
+product-price.product-price--main-product .price {
+  font-size: clamp(1.75rem, 2vw + 1rem, 2.4rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+product-price.product-price--main-product .compare-at-price {
+  font-size: clamp(1rem, 0.5vw + 0.9rem, 1.2rem);
+  font-weight: 500;
+}
+
+product-price.product-price--main-product .price__regular,
+product-price.product-price--main-product .price__sale {
+  width: 100%;
+}
+
 /* Volume pricing note should match unit-price styling (small, grey text) */
 product-price .volume-pricing-note,
 product-price.text-block:is(.h1, .h2, .h3, .h4, .h5, .h6) .volume-pricing-note {
